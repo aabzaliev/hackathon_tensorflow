@@ -182,7 +182,7 @@ public class MultiBoxTracker {
   public synchronized void trackResults(
       final List<Recognition> results, final byte[] frame, final long timestamp) {
     logger.i("Processing %d results from %d", results.size(), timestamp);
-    processResults(timestamp, results, frame);
+    processResults(timestamp, results, frame, "http://10.0.26.63/");
   }
 
   public synchronized void draw(final Canvas canvas) {
@@ -269,7 +269,7 @@ public class MultiBoxTracker {
   }
 
   private void processResults(
-      final long timestamp, final List<Recognition> results, final byte[] originalFrame) {
+      final long timestamp, final List<Recognition> results, final byte[] originalFrame, String url) {
     final List<Pair<Float, Recognition>> rectsToTrack = new LinkedList<Pair<Float, Recognition>>();
 
     screenRects.clear();
@@ -295,32 +295,29 @@ public class MultiBoxTracker {
       }
       rectsToTrack.add(new Pair<Float, Recognition>(result.getConfidence(), result));
 
-      logger.i(
-              "Debug: " + "written as " + result.getTitle());
-
       logger.i(result.getTitle());
+
+      if (result.getTitle().equals("traffic light") || result.getTitle().equals("stop sign")) {
+        beep.startTone(ToneGenerator.TONE_DTMF_1,200);
 
         try
         {
           logger.i("At least I tried");
-          final TextView mTextView = (TextView) findViewById(R.id.text);
 
           // Instantiate the RequestQueue.
-          RequestQueue queue = Volley.newRequestQueue(SignupActivity.this);
-          String url ="http://www.google.com";
-
+          RequestQueue queue = Volley.newRequestQueue(context);
+          
           // Request a string response from the provided URL.
           StringRequest stringRequest = new StringRequest(Request.Method.GET, url,
                   new Response.Listener<String>() {
                     @Override
                     public void onResponse(String response) {
                       // Display the first 500 characters of the response string.
-                      mTextView.setText("Response is: "+ response.substring(0,500));
+                      logger.i("Did work!");
                     }
                   }, new Response.ErrorListener() {
             @Override
             public void onErrorResponse(VolleyError error) {
-              mTextView.setText("That didn't work!");
             }
           });
 
@@ -328,15 +325,8 @@ public class MultiBoxTracker {
           queue.add(stringRequest);
         }
         catch (Exception e) {
-          /* This is a generic Exception handler which means it can handle
-           * all the exceptions. This will execute if the exception is not
-           * handled by previous catch blocks.
-           */
-          logger.i("111111Exception occurred");
+          logger.i("Exception occurred");
         }
-
-      if (result.getTitle().equals("traffic light") || result.getTitle().equals("stop sign")) {
-        beep.startTone(ToneGenerator.TONE_DTMF_1,200);
       }
     }
 
