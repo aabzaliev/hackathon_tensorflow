@@ -52,6 +52,7 @@ import com.android.volley.toolbox.StringRequest;
 import com.android.volley.toolbox.Volley;
 
 import java.net.HttpURLConnection;
+import android.speech.tts.TextToSpeech;
 
 // for requests
 
@@ -182,7 +183,7 @@ public class MultiBoxTracker {
   public synchronized void trackResults(
       final List<Recognition> results, final byte[] frame, final long timestamp) {
     logger.i("Processing %d results from %d", results.size(), timestamp);
-    processResults(timestamp, results, frame, "http://10.0.26.63/");
+    processResults(timestamp, results, frame, "http://10.0.25.143/");
   }
 
   public synchronized void draw(final Canvas canvas) {
@@ -275,7 +276,10 @@ public class MultiBoxTracker {
     screenRects.clear();
     final Matrix rgbFrameToScreen = new Matrix(getFrameToCanvasMatrix());
 
+    int num_persons = 0;
+
     for (final Recognition result : results) {
+
       if (result.getLocation() == null) {
         continue;
       }
@@ -297,7 +301,39 @@ public class MultiBoxTracker {
 
       logger.i(result.getTitle());
 
-      if (result.getTitle().equals("traffic light") || result.getTitle().equals("stop sign")) {
+      if (result.getTitle().equals("person") && result.getConfidence() > 0.4) {
+        num_persons += 1;
+      }
+
+      if (num_persons >= 4) {
+
+        try
+        {
+          // Instantiate the RequestQueue.
+          RequestQueue queue = Volley.newRequestQueue(context);
+
+          // Request a string response from the provided URL.
+          StringRequest stringRequest = new StringRequest(Request.Method.GET, url,
+                  new Response.Listener<String>() {
+                    @Override
+                    public void onResponse(String response) {
+                      logger.i("Did work!");
+                    }
+                  }, new Response.ErrorListener() {
+            @Override
+            public void onErrorResponse(VolleyError error) {
+            }
+          });
+
+          // Add the request to the RequestQueue.
+          queue.add(stringRequest);
+        }
+        catch (Exception e) {
+          logger.i("Exception occurred");
+        }
+      }
+
+      if (result.getTitle().equals("stop sign") && result.getConfidence() > 0.8) {
         beep.startTone(ToneGenerator.TONE_DTMF_1,200);
 
         try
@@ -306,7 +342,7 @@ public class MultiBoxTracker {
 
           // Instantiate the RequestQueue.
           RequestQueue queue = Volley.newRequestQueue(context);
-          
+
           // Request a string response from the provided URL.
           StringRequest stringRequest = new StringRequest(Request.Method.GET, url,
                   new Response.Listener<String>() {
